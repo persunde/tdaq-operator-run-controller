@@ -21,3 +21,11 @@
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
+
+# Intellij files
+.idea/
+*.iml
+src/main/java/ch/cern/k8sjava/KubeController2.java
+src/main/java/ch/cern/k8sjava/KubeController3.java
+target/
+TODO.txt

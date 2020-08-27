@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="ASCII"?>
+
+<!-- oks-schema version 2.0 -->
+
+
+<!DOCTYPE oks-schema [
+        <!ELEMENT oks-schema (info, (include)?, (comments)?, (class)+)>
+        <!ELEMENT info EMPTY>
+        <!ATTLIST info
+                name CDATA #REQUIRED
+                type CDATA #REQUIRED
+                num-of-items CDATA #REQUIRED
+                oks-format CDATA #FIXED "schema"
+                oks-version CDATA #REQUIRED
+                created-by CDATA #REQUIRED
+                created-on CDATA #REQUIRED
+                creation-time CDATA #REQUIRED
+                last-modified-by CDATA #REQUIRED
+                last-modified-on CDATA #REQUIRED
+                last-modification-time CDATA #REQUIRED
+                >
+        <!ELEMENT include (file)+>
+        <!ELEMENT file EMPTY>
+        <!ATTLIST file
+                path CDATA #REQUIRED
+                >
+        <!ELEMENT comments (comment)+>
+        <!ELEMENT comment EMPTY>
+        <!ATTLIST comment
+                creation-time CDATA #REQUIRED
+                created-by CDATA #REQUIRED
+                created-on CDATA #REQUIRED
+                author CDATA #REQUIRED
+                text CDATA #REQUIRED
+                >
+        <!ELEMENT class (superclass | attribute | relationship | method)*>
+        <!ATTLIST class
+                name CDATA #REQUIRED
+                description CDATA ""
+                is-abstract (yes|no) "no"
+                >
+        <!ELEMENT superclass EMPTY>
+        <!ATTLIST superclass name CDATA #REQUIRED>
+        <!ELEMENT attribute EMPTY>
+        <!ATTLIST attribute
+                name CDATA #REQUIRED
+                description CDATA ""
+                type (bool|s8|u8|s16|u16|s32|u32|s64|u64|float|double|date|time|string|uid|enum|class) #REQUIRED
+                range CDATA ""
+                format (dec|hex|oct) "dec"
+                is-multi-value (yes|no) "no"
+                init-value CDATA ""
+                is-not-null (yes|no) "no"
+                >
+        <!ELEMENT relationship EMPTY>
+        <!ATTLIST relationship
+                name CDATA #REQUIRED
+                description CDATA ""
+                class-type CDATA #REQUIRED
+                low-cc (zero|one) #REQUIRED
+                high-cc (one|many) #REQUIRED
+                is-composite (yes|no) #REQUIRED
+                is-exclusive (yes|no) #REQUIRED
+                is-dependent (yes|no) #REQUIRED
+                >
+        <!ELEMENT method (method-implementation*)>
+        <!ATTLIST method
+                name CDATA #REQUIRED
+                description CDATA ""
+                >
+        <!ELEMENT method-implementation EMPTY>
+        <!ATTLIST method-implementation
+                language CDATA #REQUIRED
+                prototype CDATA #REQUIRED
+                body CDATA ""
+                >
+        ]>
+
+<oks-schema>
+
+    <info name="" type="" num-of-items="5" oks-format="schema" oks-version="oks-06-08-03 built &quot;Jul  14 2014&quot;" created-by="pesunde" created-on="pcatd122n.cern.ch" creation-time="20140128T124835" last-modified-by="glehmann" last-modified-on="pcatd96.cern.ch" last-modification-time="20141107T143350"/>
+
+    <include>
+        <file path="daq/schema/core.schema.xml"/>
+        <file path="daq/schema/df.schema.xml"/>
+        <file path="daq/schema/RODBusy.schema.xml"/>
+    </include>
+
+    <class name="KubernetesRCApplication" description="Extension of a Run Control application for controlling a Kubernetes cluster">
+        <superclass name="RunControlApplication"/>
+        <attribute name="kubeconfigFilePath" description="Paths to the kubeconfig file." type="string" init-value="" is-not-null="yes"/>
+        <relationship name="KubernetesTypes" description="Kubernets types administered by this K8SRunController" class-type="KubernetesAbstractType" low-cc="zero" high-cc="many" is-composite="yes" is-exclusive="no" is-dependent="no"/>
+    </class>
+
+    <!-- The super class for the K8S OKS objects -->
+    <class name="KubernetesAbstractType" is-abstract="yes" description="Abstract class for Kubernets OKS types">
+        <attribute name="Yaml file paths" description="Paths to the yaml files. Seperate multiple files with newline" type="string" is-multi-value="yes" init-value="" is-not-null="yes"/>
+    </class>
+
+    <class name="KubernetesDeployment" description="Kubernetes deployment">
+        <superclass name="KubernetesAbstractType"/>
+        <attribute name="namespace" description="The Kubernetes namespace this deployment will be deployed in" type="string" init-value="" is-not-null="yes"/>
+        <attribute name="WaitForCompletion" description="If true, it waits for the deployment to finish before doing anything else, such as a transition change" type="bool" init-value="True" is-not-null="yes"/>
+        <attribute name="PercentTarget" description="The percentage of pods to be in the Ready state or be fully terminated from the cluster on Deployment creation and deletion. Only used if WaitForCompletion is True - value must be in Range [0 - 100]" type="s16" init-value="" is-not-null="yes"/>
+    </class>
+
+    <class name="KubernetesHorizontalPodAutoscaler" description="HorizontalPodAutoscaler for a KubernetesDeployment">
+        <superclass name="KubernetesAbstractType"/>
+    </class>
+
+    <class name="KubernetesPriority" description="Priority for a KubernetesDeployment, defines if the deployment should be evicted or take precedence over another during scheduling when there is not enough resources or when affinity rules affect the scheduling">
+        <superclass name="KubernetesAbstractType"/>
+    </class>
+
+</oks-schema>

@@ -1,0 +1,20 @@
+#!/bin/sh
+
+# This script should be configured in OKS as a "Script" with the "Shell" attribute set to "java"
+
+# Check the java bin
+declare java="$TDAQ_JAVA_HOME"/bin/java
+if [ -z "$TDAQ_JAVA_HOME" ]; then
+     echo "Could not find java binary. Please, check the TDAQ_JAVA_HOME value."
+     exit
+fi
+
+# Set this to avoid interference between native signal handlers and the JVM ones
+# For the proper path, check the value of the "TDAQ_JAVA_HOME" environment variable in the OKS database
+export LD_PRELOAD="$TDAQ_JAVA_HOME"/lib/amd64/libjsig.so
+
+# Exec (that is mandatory) the java application
+# Note also the properties for the partition, application name and configuration
+# tdaq.partition and tdaq.appname are also set by the CommandLineParser constructor, if used
+exec $java -Dtdaq.partition=${TDAQ_PARTITION} -Dtdaq.dbconfig=${TDAQ_DB} -Dtdaq.appname=${TDAQ_APPLICATION_NAME} \
+           -cp $TDAQ_CLASSPATH:$CLASSPATH ch.cern.k8sjava.KubeController "$@"
