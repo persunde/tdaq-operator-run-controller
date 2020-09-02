@@ -220,7 +220,7 @@ public class KubeOperatorController {
          * @throws IOException - Throws if it can not find the kubeconfig file in OKS
          */
         @NotNull
-        private String getKubeconfigFilePathFromOKS() throws IOException {
+        private String getKubeconfigFilePathFromOKS() throws IOException, OnlineServicesFailure {
             final OnlineServices os = OnlineServices.instance();
             final dal.RunControlApplicationBase application = os.getApplication();
 
