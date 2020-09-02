@@ -2,7 +2,6 @@ package ch.cern.tdaq.operator.runcontroller;
 
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.kubernetes.client.openapi.ApiException;
 import org.apache.commons.cli.ParseException;
 import org.jetbrains.annotations.NotNull;
 
@@ -30,8 +29,6 @@ import tdaqoperator.KubernetesTdaqOperatorRCApplication_Helper;
 import config.Configuration;
 
 public class KubeOperatorController {
-    public static String partitionName = "";
-
     // Exception extending ers.Issue in order to report errors during state transitions
     static class TransitionFailure extends Issue {
         private static final long serialVersionUID = 7123663373144988455L;
@@ -129,7 +126,7 @@ public class KubeOperatorController {
                 initK8SCluster(kubeConfigPath);
             }
             catch(final OnlineServicesFailure | IOException ex) {
-                throw new ch.cern.k8sjava.KubeController.TransitionFailure("Cannot retrieve configuration information: " + ex.getMessage(), ex);
+                throw new ch.cern.tdaq.operator.runcontroller.KubeOperatorController.TransitionFailure("Cannot retrieve configuration information: " + ex.getMessage(), ex);
             }
             this.logTransition(cmd);
         }
@@ -141,11 +138,6 @@ public class KubeOperatorController {
 
         @Override
         public void prepareForRun(final TransitionCmd cmd) throws Issue {
-            try {
-                applyEverything();
-            } catch (ApiException | IOException e) {
-                throw new ch.cern.k8sjava.KubeController.TransitionFailure("failed to apply all the yaml files to the cluster", e);
-            }
             this.logTransition(cmd);
         }
 
@@ -161,11 +153,6 @@ public class KubeOperatorController {
 
         @Override
         public void stopHLT(final TransitionCmd cmd) throws Issue {
-            try {
-                deleteNewDeployment();
-            } catch (ApiException e) {
-                throw new ch.cern.k8sjava.KubeController.TransitionFailure("Failed to delete all the deployments", e);
-            }
             this.logTransition(cmd);
         }
 
@@ -235,10 +222,10 @@ public class KubeOperatorController {
         @NotNull
         private String getKubeconfigFilePathFromOKS() throws IOException {
             final OnlineServices os = OnlineServices.instance();
-            final dal.BaseApplication application = os.getApplication();
+            final dal.RunControlApplicationBase application = os.getApplication();
 
             final KubernetesTdaqOperatorRCApplication app = KubernetesTdaqOperatorRCApplication_Helper.cast(application);
-            if (ta != null) {
+            if (app != null) {
                 String kubeconfigFilePath = app.get_kubeconfigFilePath();
                 if (kubeconfigFilePath != null && !kubeconfigFilePath.isEmpty()) {
                     return kubeconfigFilePath;
@@ -291,15 +278,14 @@ public class KubeOperatorController {
         try {
             // Parse the command line options using the provided utility class
             final CommandLineParser cmdLine = new CommandLineParser(argv);
-            partitionName = cmdLine.getPartitionName();
+            String partitionName = cmdLine.getPartitionName();
 
             // Create the JItemCtrl
             final JItemCtrl ic = new JItemCtrl(cmdLine.getApplicationName(),
                     cmdLine.getParentName(),
                     cmdLine.getSegmentName(),
-                    //cmdLine.getPartitionName(),
                     partitionName,
-                    new ch.cern.k8sjava.KubeController.MyControllable(),
+                    new KubeOperatorController.MyControllable(),
                     cmdLine.isInteractive());
 
             // Initialize the run control framework
