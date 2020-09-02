@@ -17,4 +17,4 @@ export LD_PRELOAD="$TDAQ_JAVA_HOME"/lib/amd64/libjsig.so
 # Note also the properties for the partition, application name and configuration
 # tdaq.partition and tdaq.appname are also set by the CommandLineParser constructor, if used
 exec $java -Dtdaq.partition=${TDAQ_PARTITION} -Dtdaq.dbconfig=${TDAQ_DB} -Dtdaq.appname=${TDAQ_APPLICATION_NAME} \
-           -cp $TDAQ_CLASSPATH:$CLASSPATH ch.cern.k8sjava.KubeController "$@"
+           -cp $TDAQ_CLASSPATH:$CLASSPATH ch.cern.tdaq.operator.runcontroller.KubeOperatorController "$@"
