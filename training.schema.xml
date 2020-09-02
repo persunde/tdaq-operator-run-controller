@@ -86,30 +86,9 @@
         <file path="daq/schema/RODBusy.schema.xml"/>
     </include>
 
-    <class name="KubernetesRCApplication" description="Extension of a Run Control application for controlling a Kubernetes cluster">
+    <class name="KubernetesTdaqOperatorRCApplication" description="Extension of a Run Control application for controlling a Kubernetes cluster">
         <superclass name="RunControlApplication"/>
         <attribute name="kubeconfigFilePath" description="Paths to the kubeconfig file." type="string" init-value="" is-not-null="yes"/>
-        <relationship name="KubernetesTypes" description="Kubernets types administered by this K8SRunController" class-type="KubernetesAbstractType" low-cc="zero" high-cc="many" is-composite="yes" is-exclusive="no" is-dependent="no"/>
-    </class>
-
-    <!-- The super class for the K8S OKS objects -->
-    <class name="KubernetesAbstractType" is-abstract="yes" description="Abstract class for Kubernets OKS types">
-        <attribute name="Yaml file paths" description="Paths to the yaml files. Seperate multiple files with newline" type="string" is-multi-value="yes" init-value="" is-not-null="yes"/>
-    </class>
-
-    <class name="KubernetesDeployment" description="Kubernetes deployment">
-        <superclass name="KubernetesAbstractType"/>
-        <attribute name="namespace" description="The Kubernetes namespace this deployment will be deployed in" type="string" init-value="" is-not-null="yes"/>
-        <attribute name="WaitForCompletion" description="If true, it waits for the deployment to finish before doing anything else, such as a transition change" type="bool" init-value="True" is-not-null="yes"/>
-        <attribute name="PercentTarget" description="The percentage of pods to be in the Ready state or be fully terminated from the cluster on Deployment creation and deletion. Only used if WaitForCompletion is True - value must be in Range [0 - 100]" type="s16" init-value="" is-not-null="yes"/>
-    </class>
-
-    <class name="KubernetesHorizontalPodAutoscaler" description="HorizontalPodAutoscaler for a KubernetesDeployment">
-        <superclass name="KubernetesAbstractType"/>
-    </class>
-
-    <class name="KubernetesPriority" description="Priority for a KubernetesDeployment, defines if the deployment should be evicted or take precedence over another during scheduling when there is not enough resources or when affinity rules affect the scheduling">
-        <superclass name="KubernetesAbstractType"/>
     </class>
 
 </oks-schema>

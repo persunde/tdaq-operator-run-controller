@@ -60,7 +60,6 @@ public class KubeOperatorController {
 
     // This interface defines the actions the application will execute
     static class MyControllable implements JControllable {
-        private HashMap<String, K8SType> k8STypeMap = new HashMap<String, K8SType>();
         private config.Configuration db = null;
 
         MyControllable() throws Exception {
