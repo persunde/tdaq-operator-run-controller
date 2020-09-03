@@ -140,7 +140,7 @@ public class KubeOperatorController {
 
         @Override
         public void prepareForRun(final TransitionCmd cmd) throws Issue {
-            final rc.RunParamsNamed isInfo = new rc.RunParamsNamed(partitionName,
+            final rc.RunParamsNamed isInfo = new rc.RunParamsNamed(os.getPartition(),
                     "RunParams.RunParams",
                     rc.RunParamsNamed.type.getName());
 
