@@ -105,6 +105,14 @@ public class RunControllerCustomResourceHelper {
      */
 
     public void createOrUpdateCustomResource(String partitionName, String runType, long runNumber) {
+        /**
+         * TODO: create a filter function that hopefully creates DNS (RFC 1123) compatible names
+         * This should be a valid RegEx to fix the issue:
+         * https://stackoverflow.com/questions/2063213/regular-expression-for-validating-dns-label-host-name/2063247#2063247
+         */
+        partitionName = partitionName.replace("_", "-").toLowerCase();
+        runType = runType.replace("_", "-").toLowerCase();
+
         String filteredNamespace = createNamespaceIfNotExists(partitionName);
         CustomResourceDefinition runControllerCrd = kubernetesClient.customResourceDefinitions().withName(CRD_NAME).get();
         CustomResourceDefinitionContext context = CustomResourceDefinitionContext.fromCrd(runControllerCrd);
@@ -167,8 +175,9 @@ public class RunControllerCustomResourceHelper {
      * Creates a new namespace if it does not already exist.
      * This should be used to create a namespace for each partition running in the cluster.
      *
+     * See: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/
      * NOTE: Restrictions on the name:
-     *     contain no more than 253 characters
+     *     contain no more than 253 characters (sometimes 64 characters)
      *     contain only lowercase alphanumeric characters, '-' or '.'
      *     start with an alphanumeric character
      *     end with an alphanumeric character
