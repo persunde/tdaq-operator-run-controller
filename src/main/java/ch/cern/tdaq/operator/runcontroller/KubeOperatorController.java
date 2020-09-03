@@ -151,7 +151,7 @@ public class KubeOperatorController {
                 // Can be ignored
             }
             catch(final Exception ex) {
-                throw new ch.cern.tdaq.operator.runcontroller.KubeOperatorController.TransitionFailure("Checkout from RunParams IS server failed: " + ex, ex)
+                throw new ch.cern.tdaq.operator.runcontroller.KubeOperatorController.TransitionFailure("Checkout from RunParams IS server failed: " + ex, ex);
             }
 
             long runNumber = isInfo.run_number;
