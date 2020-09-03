@@ -224,7 +224,7 @@ public class KubeOperatorController {
          * That will cause the RunControllerOperator (program running inside the K8S Cluster) to register a new Run is
          * started and it needs to deploy a new deployment to handle the data from the new run.
          */
-        private void startNewDeployment() throws IOException {
+        private void startNewDeployment() {
             /**
              * updateRunControllerCustomResourceWithNewRun() does this:
              * 1. Get the CR

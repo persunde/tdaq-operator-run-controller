@@ -103,18 +103,18 @@ public class RunControllerCustomResourceHelper {
      * 3.1 Create new CR with the new RunNumber
      */
 
-    public void createOrUpdateCustomResource(String partitionName, String runType, long runNumber) throws FileNotFoundException {
-        createNamespaceIfNotExists(partitionName);
+    public void createOrUpdateCustomResource(String partitionName, String runType, long runNumber) {
+        String filteredNamespace = createNamespaceIfNotExists(partitionName);
         CustomResourceDefinition runControllerCrd = kubernetesClient.customResourceDefinitions().withName(crdName).get();
         CustomResourceDefinitionContext context = CustomResourceDefinitionContext.fromCrd(runControllerCrd);
 //        Map<String, Object> runcontrollerCR = kubernetesClient.customResource(context).get(namespace, RUN_CONTROLLER_CR_NAME);
 //        Map<String, Object> customResources = kubernetesClient.customResource(context).list(namespace);
 
-        String customResourceName = getCustomResourceName(partitionName, runType, runNumber);
+        String customResourceName = getCustomResourceName(filteredNamespace, runType, runNumber);
         MixedOperation<RunControllerCustomResource, RunControllerCRList, DoneableRunControllerCR, Resource<RunControllerCustomResource, DoneableRunControllerCR>> crClient = kubernetesClient
                 .customResources(context, RunControllerCustomResource.class, RunControllerCRList.class, DoneableRunControllerCR.class);
 
-        RunControllerCustomResource customResource = crClient.inNamespace(partitionName).withName(customResourceName).get();
+        RunControllerCustomResource customResource = crClient.inNamespace(filteredNamespace).withName(customResourceName).get();
         if (customResource == null) {
             RunControllerCRResourceSpec spec = new RunControllerCRResourceSpec();
             spec.setName(customResourceName);
@@ -133,10 +133,10 @@ public class RunControllerCustomResourceHelper {
                 metadata = new ObjectMeta();
                 runControllerCR.setMetadata(metadata);
             }
-            metadata.setNamespace(partitionName);
+            metadata.setNamespace(filteredNamespace);
             metadata.setName(customResourceName);
 
-            crClient.inNamespace(partitionName).create(runControllerCR);
+            crClient.inNamespace(filteredNamespace).create(runControllerCR);
         } else {
             RunControllerCRResourceSpec spec = customResource.getSpec();
             spec.setName(customResourceName);
@@ -146,10 +146,10 @@ public class RunControllerCustomResourceHelper {
             customResource.getStatus().setRunFinished(false);
 
             ObjectMeta metadata = customResource.getMetadata();
-            metadata.setNamespace(partitionName);
+            metadata.setNamespace(filteredNamespace);
             metadata.setName(customResourceName);
 
-            crClient.inNamespace(partitionName).updateStatus(customResource); /* This does not actually work for some reason */
+            crClient.inNamespace(filteredNamespace).updateStatus(customResource); /* This does not actually work for some reason */
         }
     }
 
@@ -163,9 +163,17 @@ public class RunControllerCustomResourceHelper {
      * Creates a new namespace if it does not already exist.
      * This should be used to create a namespace for each partition running in the cluster.
      *
+     * NOTE: Restrictions on the name:
+     *     contain no more than 253 characters
+     *     contain only lowercase alphanumeric characters, '-' or '.'
+     *     start with an alphanumeric character
+     *     end with an alphanumeric character
+     *
      * @param namespaceName The name of the namespace. It should be the name of the related segment
+     * @return the filtered namespace
      */
-    public void createNamespaceIfNotExists(String namespaceName) throws FileNotFoundException {
+    public String createNamespaceIfNotExists(String namespaceName) {
+        namespaceName = namespaceName.replace("_", "-").toLowerCase();
         Namespace namespace = kubernetesClient.namespaces().withName(namespaceName).get();
         if (namespace == null) {
             HashMap<String, String> labels = new HashMap<>();
@@ -179,5 +187,6 @@ public class RunControllerCustomResourceHelper {
             /* Namespace namespaceObj = kubernetesClient.namespaces().load(new FileInputStream("namespace-test.yml")).get(); */
             kubernetesClient.namespaces().create(namespace);
         }
+        return namespaceName;
     }
 }
