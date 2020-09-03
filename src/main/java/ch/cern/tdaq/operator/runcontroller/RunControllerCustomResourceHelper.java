@@ -21,7 +21,8 @@ public class RunControllerCustomResourceHelper {
     private static final String METADATA_LABEL_TDAQ_WORKER_KEY = "tdaq.worker";
     private static final String METADATA_LABEL_TDAQ_WORKER_VALUE = "true";
 
-    private static final String crdName = "runresources.operator.tdaq.cern.ch";
+    final private static String CRD_NAME = "runresources.operator.tdaq.cern.ch";
+    final public static String CR_KIND = "RunResource";
     final static String RUN_NUMBER_MAP_KEY = "runNumber";
     final static String RUN_CONTROLLER_CR_NAME = "runcontroller-cr";
 
@@ -36,7 +37,7 @@ public class RunControllerCustomResourceHelper {
      * Increments the runNumber in the RunController CR and updates it
      */
     public void updateRunControllerCustomResourceWithNewRun() throws IOException {
-        CustomResourceDefinition runControllerCrd = kubernetesClient.customResourceDefinitions().withName(crdName).get();
+        CustomResourceDefinition runControllerCrd = kubernetesClient.customResourceDefinitions().withName(CRD_NAME).get();
         CustomResourceDefinitionContext context = CustomResourceDefinitionContext.fromCrd(runControllerCrd);
         /**
          * Note: CR's can be cluster wide or in a given namespace. If we want to use more than one namespace, we need to get the correct namespace here
@@ -72,9 +73,9 @@ public class RunControllerCustomResourceHelper {
      */
     public void updateRunControllerCustomResourceWithNewRunOld() {
         /**
-         * !IMPORTANT NOTE: the crdName must match here, in the Operator and in the CRD yaml file!!!
+         * !IMPORTANT NOTE: the CRD_NAME must match here, in the Operator and in the CRD yaml file!!!
          */
-        CustomResourceDefinition runControllerCrd = kubernetesClient.customResourceDefinitions().withName(crdName).get();
+        CustomResourceDefinition runControllerCrd = kubernetesClient.customResourceDefinitions().withName(CRD_NAME).get();
         CustomResourceDefinitionContext context = CustomResourceDefinitionContext.fromCrd(runControllerCrd);
 
         MixedOperation<RunControllerCustomResource, RunControllerCRList, DoneableRunControllerCR, Resource<RunControllerCustomResource, DoneableRunControllerCR>> crClient = kubernetesClient
@@ -105,7 +106,7 @@ public class RunControllerCustomResourceHelper {
 
     public void createOrUpdateCustomResource(String partitionName, String runType, long runNumber) {
         String filteredNamespace = createNamespaceIfNotExists(partitionName);
-        CustomResourceDefinition runControllerCrd = kubernetesClient.customResourceDefinitions().withName(crdName).get();
+        CustomResourceDefinition runControllerCrd = kubernetesClient.customResourceDefinitions().withName(CRD_NAME).get();
         CustomResourceDefinitionContext context = CustomResourceDefinitionContext.fromCrd(runControllerCrd);
 //        Map<String, Object> runcontrollerCR = kubernetesClient.customResource(context).get(namespace, RUN_CONTROLLER_CR_NAME);
 //        Map<String, Object> customResources = kubernetesClient.customResource(context).list(namespace);
@@ -125,6 +126,7 @@ public class RunControllerCustomResourceHelper {
             status.setRunFinished(false);
 
             RunControllerCustomResource runControllerCR = new RunControllerCustomResource();
+            runControllerCR.setKind(CR_KIND);
             runControllerCR.setSpec(spec);
             runControllerCR.setStatus(status);
 
