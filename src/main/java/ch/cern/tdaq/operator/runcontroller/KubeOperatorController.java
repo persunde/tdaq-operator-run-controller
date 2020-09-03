@@ -58,9 +58,11 @@ public class KubeOperatorController {
     // This interface defines the actions the application will execute
     static class MyControllable implements JControllable {
         private config.Configuration db = null;
+        final private String partitionName;
 
-        MyControllable() throws Exception {
+        MyControllable(String partitionName) throws Exception {
             super();
+            this.partitionName = partitionName;
         }
 
         @Override
@@ -138,7 +140,7 @@ public class KubeOperatorController {
 
         @Override
         public void prepareForRun(final TransitionCmd cmd) throws Issue {
-            final rc.RunParamsNamed isInfo = new rc.RunParamsNamed(Igui.instance().getPartition(),
+            final rc.RunParamsNamed isInfo = new rc.RunParamsNamed(partitionName,
                     IguiConstants.RUNPARAMS_IS_INFO_NAME,
                     rc.RunParamsNamed.type.getName());
 
@@ -153,9 +155,8 @@ public class KubeOperatorController {
             }
 
             long runNumber = isInfo.run_number;
-            final String runType = runParamsInfo.run_type;
-            String beamType = runParamsInfo.beam_type;
-            String partitionName = IguiConstants.TDAQ_INITIAL_PARTITION;
+            final String runType = isInfo.run_type;
+            String beamType = isInfo.beam_type;
 
             this.logTransition(cmd);
         }
@@ -304,7 +305,7 @@ public class KubeOperatorController {
                     cmdLine.getParentName(),
                     cmdLine.getSegmentName(),
                     partitionName,
-                    new KubeOperatorController.MyControllable(),
+                    new KubeOperatorController.MyControllable(partitionName),
                     cmdLine.isInteractive());
 
             // Initialize the run control framework
