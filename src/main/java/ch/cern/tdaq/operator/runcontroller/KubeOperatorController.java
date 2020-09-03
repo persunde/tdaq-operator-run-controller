@@ -138,6 +138,25 @@ public class KubeOperatorController {
 
         @Override
         public void prepareForRun(final TransitionCmd cmd) throws Issue {
+            final rc.RunParamsNamed isInfo = new rc.RunParamsNamed(Igui.instance().getPartition(),
+                    IguiConstants.RUNPARAMS_IS_INFO_NAME,
+                    rc.RunParamsNamed.type.getName());
+
+            try {
+                isInfo.checkout();
+            }
+            catch(final is.InfoNotFoundException ex) {
+                // Can be ignored
+            }
+            catch(final Exception ex) {
+                throw new IguiException.ISException("Checkout from RunParams IS server failed: " + ex, ex);
+            }
+
+            long runNumber = isInfo.run_number;
+            final String runType = runParamsInfo.run_type;
+            String beamType = runParamsInfo.beam_type;
+            String partitionName = IguiConstants.TDAQ_INITIAL_PARTITION;
+
             this.logTransition(cmd);
         }
 
