@@ -158,7 +158,8 @@ public class RunControllerCustomResourceHelper {
     private String getCustomResourceName(String partitionName, String runType, long runNumber) {
         final int runNumberPaddingSize = 4;
         String formattedRunNumber = String.format("%0" + runNumberPaddingSize + "d", runNumber);
-        return partitionName + "-" + runType + "-" + formattedRunNumber;
+        String fullNewName = partitionName + "-" + runType + "-" + formattedRunNumber;
+        return fullNewName.toLowerCase();
     }
 
     /**
