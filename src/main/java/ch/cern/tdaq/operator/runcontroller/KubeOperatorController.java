@@ -140,6 +140,7 @@ public class KubeOperatorController {
 
         @Override
         public void prepareForRun(final TransitionCmd cmd) throws Issue {
+            final OnlineServices os = OnlineServices.instance();
             final rc.RunParamsNamed isInfo = new rc.RunParamsNamed(os.getPartition(),
                     "RunParams.RunParams",
                     rc.RunParamsNamed.type.getName());
