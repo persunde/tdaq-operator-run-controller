@@ -59,6 +59,10 @@ public class KubeOperatorController {
     static class MyControllable implements JControllable {
         private config.Configuration db = null;
         final private String partitionName;
+        private long runNumber;
+        private String runType;
+        private int beamType;
+
 
         MyControllable(String partitionName) throws Exception {
             super();
@@ -154,9 +158,9 @@ public class KubeOperatorController {
                 throw new ch.cern.tdaq.operator.runcontroller.KubeOperatorController.TransitionFailure("Checkout from RunParams IS server failed: " + ex, ex);
             }
 
-            long runNumber = isInfo.run_number;
-            final String runType = isInfo.run_type;
-            int beamType = isInfo.beam_type;
+            this.runNumber = isInfo.run_number;
+            this.runType = isInfo.run_type;
+            this.beamType = isInfo.beam_type;
 
             this.logTransition(cmd);
         }
@@ -230,7 +234,8 @@ public class KubeOperatorController {
              */
             try (final KubernetesClient kubernetesClient = new DefaultKubernetesClient()) {
                 RunControllerCustomResourceHelper customResourceHelper = new RunControllerCustomResourceHelper(kubernetesClient);
-                customResourceHelper.updateRunControllerCustomResourceWithNewRun();
+                //customResourceHelper.updateRunControllerCustomResourceWithNewRun();
+                customResourceHelper.createOrUpdateCustomResource(this.partitionName, this.runType, this.runNumber);
             }
         }
 

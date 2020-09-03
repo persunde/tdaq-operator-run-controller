@@ -103,36 +103,60 @@ public class RunControllerCustomResourceHelper {
      * 3.1 Create new CR with the new RunNumber
      */
 
-    public void createNewCR(String namespace, String customResourceName, long runNumber) {
+    public void createOrUpdateCustomResource(String partitionName, String runType, long runNumber) throws FileNotFoundException {
+        createNamespaceIfNotExists(partitionName);
         CustomResourceDefinition runControllerCrd = kubernetesClient.customResourceDefinitions().withName(crdName).get();
         CustomResourceDefinitionContext context = CustomResourceDefinitionContext.fromCrd(runControllerCrd);
 //        Map<String, Object> runcontrollerCR = kubernetesClient.customResource(context).get(namespace, RUN_CONTROLLER_CR_NAME);
 //        Map<String, Object> customResources = kubernetesClient.customResource(context).list(namespace);
 
+        String customResourceName = getCustomResourceName(partitionName, runType, runNumber);
         MixedOperation<RunControllerCustomResource, RunControllerCRList, DoneableRunControllerCR, Resource<RunControllerCustomResource, DoneableRunControllerCR>> crClient = kubernetesClient
                 .customResources(context, RunControllerCustomResource.class, RunControllerCRList.class, DoneableRunControllerCR.class);
 
-        RunControllerCRResourceSpec spec = new RunControllerCRResourceSpec();
-        spec.setName(customResourceName);
-        spec.setRunNumber(runNumber);
-        spec.setRunPipe("proton");
+        RunControllerCustomResource customResource = crClient.inNamespace(partitionName).withName(customResourceName).get();
+        if (customResource == null) {
+            RunControllerCRResourceSpec spec = new RunControllerCRResourceSpec();
+            spec.setName(customResourceName);
+            spec.setRunNumber(runNumber);
+            spec.setRunPipe(runType);
 
-        RunControllerCRStatus status = new RunControllerCRStatus();
-        status.setRunFinished(false);
+            RunControllerCRStatus status = new RunControllerCRStatus();
+            status.setRunFinished(false);
 
-        RunControllerCustomResource runControllerCR = new RunControllerCustomResource();
-        runControllerCR.setSpec(spec);
-        runControllerCR.setStatus(status);
+            RunControllerCustomResource runControllerCR = new RunControllerCustomResource();
+            runControllerCR.setSpec(spec);
+            runControllerCR.setStatus(status);
 
-        ObjectMeta metadata = runControllerCR.getMetadata();
-        if (metadata == null) {
-            metadata = new ObjectMeta();
-            runControllerCR.setMetadata(metadata);
+            ObjectMeta metadata = runControllerCR.getMetadata();
+            if (metadata == null) {
+                metadata = new ObjectMeta();
+                runControllerCR.setMetadata(metadata);
+            }
+            metadata.setNamespace(partitionName);
+            metadata.setName(customResourceName);
+
+            crClient.inNamespace(partitionName).create(runControllerCR);
+        } else {
+            RunControllerCRResourceSpec spec = customResource.getSpec();
+            spec.setName(customResourceName);
+            spec.setRunNumber(runNumber);
+            spec.setRunPipe(runType);
+
+            customResource.getStatus().setRunFinished(false);
+
+            ObjectMeta metadata = customResource.getMetadata();
+            metadata.setNamespace(partitionName);
+            metadata.setName(customResourceName);
+
+            crClient.inNamespace(partitionName).updateStatus(customResource); /* This does not actually work for some reason */
         }
-        metadata.setNamespace(namespace);
-        metadata.setName(customResourceName);
+    }
 
-        crClient.inNamespace(namespace).create(runControllerCR);
+    private String getCustomResourceName(String partitionName, String runType, long runNumber) {
+        final int runNumberPaddingSize = 4;
+        String formattedRunNumber = String.format("%0" + runNumberPaddingSize + "d", runNumber);
+        return partitionName + "-" + runType + "-" + formattedRunNumber;
     }
 
     /**
@@ -143,7 +167,7 @@ public class RunControllerCustomResourceHelper {
      */
     public void createNamespaceIfNotExists(String namespaceName) throws FileNotFoundException {
         Namespace namespace = kubernetesClient.namespaces().withName(namespaceName).get();
-        if (namespace == null || namespaceName.isEmpty()) {
+        if (namespace == null) {
             HashMap<String, String> labels = new HashMap<>();
             labels.put("name", namespaceName);
             namespace = new NamespaceBuilder()
