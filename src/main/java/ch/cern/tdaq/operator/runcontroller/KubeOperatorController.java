@@ -141,7 +141,7 @@ public class KubeOperatorController {
         @Override
         public void prepareForRun(final TransitionCmd cmd) throws Issue {
             final rc.RunParamsNamed isInfo = new rc.RunParamsNamed(partitionName,
-                    IguiConstants.RUNPARAMS_IS_INFO_NAME,
+                    "RunParams.RunParams",
                     rc.RunParamsNamed.type.getName());
 
             try {
@@ -151,12 +151,12 @@ public class KubeOperatorController {
                 // Can be ignored
             }
             catch(final Exception ex) {
-                throw new IguiException.ISException("Checkout from RunParams IS server failed: " + ex, ex);
+                throw new ch.cern.tdaq.operator.runcontroller.KubeOperatorController.TransitionFailure("Checkout from RunParams IS server failed: " + ex, ex)
             }
 
             long runNumber = isInfo.run_number;
             final String runType = isInfo.run_type;
-            String beamType = isInfo.beam_type;
+            int beamType = isInfo.beam_type;
 
             this.logTransition(cmd);
         }

@@ -27,7 +27,7 @@ tdaq_add_jar_to_repo(tdaqoperatordal.jar
 tdaq_add_jar(KubeOperatorController
   src/main/java/ch/cern/tdaq/operator/runcontroller/*.java
   src/main/java/ch/cern/tdaq/operator/runcontroller/CustomResource/*.java
-  INCLUDE_JARS tdaq-operator-run-controller/tdaqoperatordal.jar TM/testdal.jar ipc/ipc.jar Jers/ers.jar TDAQExtJars/external.jar config/config.jar dal/dal.jar)
+  INCLUDE_JARS tdaq-operator-run-controller/tdaqoperatordal.jar TM/testdal.jar is/is.jar ipc/ipc.jar Jers/ers.jar TDAQExtJars/external.jar config/config.jar dal/dal.jar)
 
 tdaq_add_scripts(bin/kube_operator_controller)
 
