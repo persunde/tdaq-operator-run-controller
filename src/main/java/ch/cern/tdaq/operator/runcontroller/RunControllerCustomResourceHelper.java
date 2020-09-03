@@ -121,6 +121,7 @@ public class RunControllerCustomResourceHelper {
             spec.setName(customResourceName);
             spec.setRunNumber(runNumber);
             spec.setRunPipe(runType);
+            spec.setLabel(partitionName.replace("_", "-").toLowerCase());
 
             RunControllerCRStatus status = new RunControllerCRStatus();
             status.setRunFinished(false);
