@@ -104,7 +104,7 @@ public class RunControllerCustomResourceHelper {
      * 3.1 Create new CR with the new RunNumber
      */
 
-    public void createOrUpdateCustomResource(String partitionName, String runType, long runNumber) {
+    public void createCustomResourceIfNotExist(String partitionName, String runType, long runNumber) {
         /**
          * TODO: create a filter function that hopefully creates DNS (RFC 1123) compatible names
          * This should be a valid RegEx to fix the issue:
@@ -148,24 +148,25 @@ public class RunControllerCustomResourceHelper {
             metadata.setName(customResourceName);
 
             crClient.inNamespace(filteredNamespace).create(runControllerCR);
-        } else {
-            RunControllerCRResourceSpec spec = customResource.getSpec();
-            spec.setName(customResourceName);
-            spec.setRunNumber(runNumber);
-            spec.setRunPipe(runType);
-
-            customResource.getStatus().setRunFinished(false);
-
-            ObjectMeta metadata = customResource.getMetadata();
-            metadata.setNamespace(filteredNamespace);
-            metadata.setName(customResourceName);
-
-            crClient.inNamespace(filteredNamespace).updateStatus(customResource); /* This does not actually work for some reason */
         }
+//        else {
+//            RunControllerCRResourceSpec spec = customResource.getSpec();
+//            spec.setName(customResourceName);
+//            spec.setRunNumber(runNumber);
+//            spec.setRunPipe(runType);
+//
+//            customResource.getStatus().setRunFinished(false);
+//
+//            ObjectMeta metadata = customResource.getMetadata();
+//            metadata.setNamespace(filteredNamespace);
+//            metadata.setName(customResourceName);
+//
+//            crClient.inNamespace(filteredNamespace).updateStatus(customResource); /* This does not actually work for some reason */
+//        }
     }
 
     private String getCustomResourceName(String partitionName, String runType, long runNumber) {
-        final int runNumberPaddingSize = 4;
+        final int runNumberPaddingSize = 10;
         String formattedRunNumber = String.format("%0" + runNumberPaddingSize + "d", runNumber);
         String fullNewName = partitionName + "-" + runType + "-" + formattedRunNumber;
         return fullNewName.toLowerCase();

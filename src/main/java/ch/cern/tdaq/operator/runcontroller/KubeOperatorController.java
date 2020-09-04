@@ -235,7 +235,7 @@ public class KubeOperatorController {
             try (final KubernetesClient kubernetesClient = new DefaultKubernetesClient()) {
                 RunControllerCustomResourceHelper customResourceHelper = new RunControllerCustomResourceHelper(kubernetesClient);
                 //customResourceHelper.updateRunControllerCustomResourceWithNewRun();
-                customResourceHelper.createOrUpdateCustomResource(this.partitionName, this.runType, this.runNumber);
+                customResourceHelper.createCustomResourceIfNotExist(this.partitionName, this.runType, this.runNumber);
             }
         }
 
