@@ -123,7 +123,12 @@ public class RunControllerCustomResourceHelper {
         MixedOperation<RunControllerCustomResource, RunControllerCRList, DoneableRunControllerCR, Resource<RunControllerCustomResource, DoneableRunControllerCR>> crClient = kubernetesClient
                 .customResources(context, RunControllerCustomResource.class, RunControllerCRList.class, DoneableRunControllerCR.class);
 
-        RunControllerCustomResource customResource = crClient.inNamespace(filteredNamespace).withName(customResourceName).get();
+        RunControllerCustomResource customResource = null;
+        try {
+            customResource = crClient.inNamespace(filteredNamespace).withName(customResourceName).get();
+        } catch (NullPointerException e) {
+            // Ignore
+        }
         if (customResource == null) {
             RunControllerCRResourceSpec spec = new RunControllerCRResourceSpec();
             spec.setName(customResourceName);
