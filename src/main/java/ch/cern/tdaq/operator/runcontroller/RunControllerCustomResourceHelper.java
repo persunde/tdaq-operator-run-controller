@@ -1,7 +1,6 @@
 package ch.cern.tdaq.operator.runcontroller;
 
 import ch.cern.tdaq.operator.runcontroller.CustomResource.*;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.Namespace;
 import io.fabric8.kubernetes.api.model.NamespaceBuilder;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
@@ -11,11 +10,9 @@ import io.fabric8.kubernetes.client.dsl.MixedOperation;
 import io.fabric8.kubernetes.client.dsl.Resource;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class RunControllerCustomResourceHelper {
     private static final String METADATA_LABEL_TDAQ_WORKER_KEY = "tdaq.worker";
@@ -34,86 +31,59 @@ public class RunControllerCustomResourceHelper {
     }
 
     /**
-     * Increments the runNumber in the RunController CR and updates it
+     * Deletes a CustomResource that is named after the parameters given.
+     * If unable to delete the CR, it will sleeps for 5 seconds before it will try again.
+     * Throws an IOException if it is unable to delete the CR after five tries.
+     * @param partitionName
+     * @param runType
+     * @param runNumber
+     * @throws IOException Throws if it is unable to delete the CR within 5 tries.
      */
-    public void updateRunControllerCustomResourceWithNewRun() throws IOException {
+    public void deleteCustomResource(String partitionName, String runType, long runNumber) throws IOException {
+        partitionName = makeStringDNSCompatible(partitionName);
+        runType = makeStringDNSCompatible(runType);
+        String filteredNamespace = makeStringDNSCompatible(partitionName);
+        String customResourceName = getCustomResourceName(filteredNamespace, runType, runNumber);
+
         CustomResourceDefinition runControllerCrd = kubernetesClient.customResourceDefinitions().withName(CRD_NAME).get();
         CustomResourceDefinitionContext context = CustomResourceDefinitionContext.fromCrd(runControllerCrd);
-        /**
-         * Note: CR's can be cluster wide or in a given namespace. If we want to use more than one namespace, we need to get the correct namespace here
-         */
-        /**
-         * This did not work for some reason...??? I have to use the "Typeless API" instead of the "Typed API"
-         */
-//        MixedOperation<RunResource, RunResourceList, DoneableRunResource, Resource<RunResource, DoneableRunResource>> crClient = kubernetesClient
-//                .customResources(context, RunResource.class, RunResourceList.class, DoneableRunResource.class);
-//        RunResource customResource = crClient.inNamespace("default").withName("runcontroller-cr").get(); /* TODO: fix how to get a generic runcontroller CR, name can change. Use label or something */
-//        RunResourceSpec spec = customResource.getSpec();
-//        int nextRunNumber = spec.getRunNumber() + 1;
-//        spec.setRunNumber(nextRunNumber);
-
-        /* TODO: set some status, like "LastUpdate" in the RunControllerCustomResource's status*/
-        /* Update the CR with the new data aka new RunNumber */
-        /* customResource = crClient.inNamespace("default").updateStatus(customResource); */
-
-        //crClient.createOrReplace(customResource);
-        //crClient.updateStatus(customResource);
-
-        Map<String, Object> runcontrollerCR = kubernetesClient.customResource(context).get("default", RUN_CONTROLLER_CR_NAME);
-
-        int newRunNumber = 1 + (int) ((HashMap<String, Object>) runcontrollerCR.get("spec")).getOrDefault(RUN_NUMBER_MAP_KEY, -1); /* Not yet tested */
-        ((HashMap<String, Object>)runcontrollerCR.get("spec")).put(RUN_NUMBER_MAP_KEY, newRunNumber);
-        runcontrollerCR = kubernetesClient.customResource(context).edit("default", RUN_CONTROLLER_CR_NAME, new ObjectMapper().writeValueAsString(runcontrollerCR));
-
-        ers.Logger.info("Updated the RunController Custom Resource");
-    }
-
-    /**
-     * Updates the RunController Custom Resource (CR)
-     */
-    public void updateRunControllerCustomResourceWithNewRunOld() {
-        /**
-         * !IMPORTANT NOTE: the CRD_NAME must match here, in the Operator and in the CRD yaml file!!!
-         */
-        CustomResourceDefinition runControllerCrd = kubernetesClient.customResourceDefinitions().withName(CRD_NAME).get();
-        CustomResourceDefinitionContext context = CustomResourceDefinitionContext.fromCrd(runControllerCrd);
-
         MixedOperation<RunControllerCustomResource, RunControllerCRList, DoneableRunControllerCR, Resource<RunControllerCustomResource, DoneableRunControllerCR>> crClient = kubernetesClient
-            .customResources(context, RunControllerCustomResource.class, RunControllerCRList.class, DoneableRunControllerCR.class);
+                .customResources(context, RunControllerCustomResource.class, RunControllerCRList.class, DoneableRunControllerCR.class);
 
-        /**
-         * Note: CR's can be cluster wide or in a given namespace. If we want to use more than one namespace, we need to get the correct namespace here
-         */
-        RunControllerCustomResource customResource = crClient.inNamespace("default").withName("runcontroller-cr").get(); /* TODO: fix how to get a generic runcontroller CR, name can change. Use label or something? */
-        RunControllerCRResourceSpec spec = customResource.getSpec();
-        long nextRunNumber = spec.getRunNumber() + 1;
-        spec.setRunNumber(nextRunNumber);
-
-        /* TODO: set some status, like "LastUpdate" in the RunControllerCustomResource's status*/
-        /* Update the CR with the new data aka new RunNumber */
-        customResource = crClient.inNamespace("default").updateStatus(customResource);
-
-        ers.Logger.info("Updated the RunController Custom Resource");
+        Boolean deleted = false;
+        int count = 0;
+        while (!deleted) {
+            deleted = crClient.inNamespace(filteredNamespace).withName(customResourceName).delete();
+            try {
+                TimeUnit.SECONDS.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            if (count++ >= 5) {
+                throw new IOException("Failed to delete the CustomResource: " + customResourceName + " in Namespace: " + filteredNamespace);
+            }
+        }
     }
 
     /**
-     * 1. Get RunNumber
-     * 2. Check if Parition-Name namespace exists if not:
-     * 2.1 Create partition-namespace
-     * 3. Get CR with this RunNumber in namespace from 2, if CR does not exist:
-     * 3.1 Create new CR with the new RunNumber
+     * Creates a new CR in the cluster if it does not already exist and creates a namespace named after the Parition,
+     * if it does not already exist.
+     * Changes the strings be DNS compatible.
+     * @param partitionName
+     * @param runType
+     * @param runNumber
      */
-
     public void createCustomResourceIfNotExist(String partitionName, String runType, long runNumber) {
         /**
          * TODO: create a filter function that hopefully creates DNS (RFC 1123) compatible names
          * This should be a valid RegEx to fix the issue:
          * https://stackoverflow.com/questions/2063213/regular-expression-for-validating-dns-label-host-name/2063247#2063247
          */
-        partitionName = partitionName.replace("_", "-").toLowerCase();
-        runType = runType.replace("_", "-").toLowerCase();
+        partitionName = makeStringDNSCompatible(partitionName);
+        runType = makeStringDNSCompatible(runType);
+        String filteredNamespace = makeStringDNSCompatible(partitionName);
 
-        String filteredNamespace = createNamespaceIfNotExists(partitionName);
+        createNamespaceIfNotExists(filteredNamespace);
         CustomResourceDefinition runControllerCrd = kubernetesClient.customResourceDefinitions().withName(CRD_NAME).get();
         CustomResourceDefinitionContext context = CustomResourceDefinitionContext.fromCrd(runControllerCrd);
 //        Map<String, Object> runcontrollerCR = kubernetesClient.customResource(context).get(namespace, RUN_CONTROLLER_CR_NAME);
@@ -134,7 +104,7 @@ public class RunControllerCustomResourceHelper {
             spec.setName(customResourceName);
             spec.setRunNumber(runNumber);
             spec.setRunPipe(runType);
-            spec.setLabel(partitionName.replace("_", "-").toLowerCase());
+            spec.setLabel(filteredNamespace);
 
             RunControllerCRStatus status = new RunControllerCRStatus();
             status.setRunFinished(false);
@@ -177,6 +147,10 @@ public class RunControllerCustomResourceHelper {
         return fullNewName.toLowerCase();
     }
 
+    private String makeStringDNSCompatible(String text) {
+        return text.replace("_", "-").toLowerCase();
+    }
+
     /**
      * Creates a new namespace if it does not already exist.
      * This should be used to create a namespace for each partition running in the cluster.
@@ -191,8 +165,8 @@ public class RunControllerCustomResourceHelper {
      * @param namespaceName The name of the namespace. It should be the name of the related segment
      * @return the filtered namespace
      */
-    public String createNamespaceIfNotExists(String namespaceName) {
-        namespaceName = namespaceName.replace("_", "-").toLowerCase();
+    public void createNamespaceIfNotExists(String namespaceName) {
+        namespaceName = makeStringDNSCompatible(namespaceName);
         Namespace namespace = kubernetesClient.namespaces().withName(namespaceName).get();
         if (namespace == null) {
             HashMap<String, String> labels = new HashMap<>();
@@ -206,6 +180,5 @@ public class RunControllerCustomResourceHelper {
             /* Namespace namespaceObj = kubernetesClient.namespaces().load(new FileInputStream("namespace-test.yml")).get(); */
             kubernetesClient.namespaces().create(namespace);
         }
-        return namespaceName;
     }
 }

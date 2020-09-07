@@ -89,23 +89,6 @@ public class KubeOperatorController {
         @Override
         public void user(final UserCmd usrCmd) throws Issue {
             ers.Logger.log("Executed user command " + usrCmd.getCommandName());
-            String commandName = usrCmd.getCommandName();
-            try {
-                String[] usrCmdParams = usrCmd.getParameters();
-                /* Parse user command, find "newrun" and if so -> start a new Deployment. Dirty and quick */
-                if (usrCmdParams != null) {
-                    for (int i = 0; i < usrCmdParams.length; i++) {
-                        String input = usrCmdParams[i].toLowerCase();
-                        if (input.contains("newrun")) {
-                            startNewDeployment();
-                            break;
-                        }
-                    }
-                }
-            } catch (final Exception e) {
-                ers.Logger.warning(e);
-                throw new ch.cern.tdaq.operator.runcontroller.KubeOperatorController.UserCmdFailure("Failed to complete the user command " + commandName + ". " + e.getMessage(), e);
-            }
         }
 
         @Override
@@ -162,6 +145,8 @@ public class KubeOperatorController {
             this.runType = isInfo.run_type;
             this.beamType = isInfo.beam_type;
 
+            startNewDeployment(this.partitionName, this.runType, this.runNumber);
+
             this.logTransition(cmd);
         }
 
@@ -177,6 +162,11 @@ public class KubeOperatorController {
 
         @Override
         public void stopHLT(final TransitionCmd cmd) throws Issue {
+            /**
+             * Deletes the CustomResource that was created in prepareForRun()
+             */
+            deleteDeployment(this.partitionName, this.runType, this.runNumber);
+
             this.logTransition(cmd);
         }
 
@@ -224,7 +214,7 @@ public class KubeOperatorController {
          * That will cause the RunControllerOperator (program running inside the K8S Cluster) to register a new Run is
          * started and it needs to deploy a new deployment to handle the data from the new run.
          */
-        private void startNewDeployment() {
+        private void startNewDeployment(String partitionName, String runType, long runNumber) {
             /**
              * updateRunControllerCustomResourceWithNewRun() does this:
              * 1. Get the CR
@@ -235,7 +225,17 @@ public class KubeOperatorController {
             try (final KubernetesClient kubernetesClient = new DefaultKubernetesClient()) {
                 RunControllerCustomResourceHelper customResourceHelper = new RunControllerCustomResourceHelper(kubernetesClient);
                 //customResourceHelper.updateRunControllerCustomResourceWithNewRun();
-                customResourceHelper.createCustomResourceIfNotExist(this.partitionName, this.runType, this.runNumber);
+                customResourceHelper.createCustomResourceIfNotExist(partitionName, runType, runNumber);
+            }
+        }
+
+        private void deleteDeployment(String partitionName, String runType, long runNumber) {
+            try (final KubernetesClient kubernetesClient = new DefaultKubernetesClient()) {
+                RunControllerCustomResourceHelper customResourceHelper = new RunControllerCustomResourceHelper(kubernetesClient);
+                customResourceHelper.deleteCustomResource(partitionName, runType, runNumber);
+            } catch (IOException ex) {
+                ers.Logger.error(ex);
+                throw new ch.cern.tdaq.operator.runcontroller.KubeOperatorController.TransitionFailure("Cannot delete the CustomResource: " + ex.getMessage(), ex);
             }
         }
 
@@ -259,13 +259,6 @@ public class KubeOperatorController {
             IOException ex = new IOException("Can not find the kubeconfig file path in OKS");
             ers.Logger.warning(ex);
             throw ex;
-        }
-
-        private config.Configuration getDb() {
-            if (this.db == null) {
-                initDb();
-            }
-            return this.db;
         }
 
         /**
